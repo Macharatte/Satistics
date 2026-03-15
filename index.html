@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Premium Calculator v141</title>
+    <style>
+        * { 
+            -webkit-tap-highlight-color: transparent; 
+            box-sizing: border-box; 
+            touch-action: manipulation;
+        }
+        
+        button, .mode-btn, .history-clear {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body { 
+            background-color: #0d0d0d; 
+            color: #e0e0e0; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            height: 100dvh; 
+            overflow: hidden; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            padding-bottom: env(safe-area-inset-bottom);
+            touch-action: none;
+        }
+
+        header { background: #1a1a1a; padding: 1vh 0; text-align: center; border-bottom: 2px solid #2e8b2e; flex: 0 0 auto; }
+        h1 { margin: 0; font-size: clamp(1rem, 4vw, 1.2rem); color: #2e8b2e; letter-spacing: 2px; }
+
+        #display-container { 
+            flex: 0 0 14vh; 
+            display: flex; 
+            align-items: center; 
+            padding: 0 20px; 
+            background: #000; 
+            border-bottom: 1px solid #222; 
+            overflow: hidden;
+        }
+        #display { 
+            width: 100%; 
+            font-size: clamp(2rem, 8vh, 4rem); 
+            text-align: right; 
+            border: none; 
+            background: transparent; 
+            color: #fff; 
+            outline: none; 
+            overflow-x: auto; 
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+            padding: 10px 0;
+            min-height: 1.2em;
+            scrollbar-width: thin;
+            caret-color: #2e8b2e;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+        #display::-webkit-scrollbar { height: 4px; }
+        #display::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+
+        .mode-selector { 
+            display: flex; overflow-x: auto; background: #1a1a1a; flex: 0 0 auto; 
+            scrollbar-width: none; -ms-overflow-style: none; border-bottom: 1px solid #333;
+            touch-action: pan-x;
+        }
+        .mode-btn { 
+            flex: 1 0 70px; height: 45px; font-size: 0.8rem; border: none; cursor: pointer; 
+            background: #222; color: #888; font-weight: bold; white-space: nowrap; transition: 0.2s;
+        }
+        .mode-btn.active { background: #2e8b2e !important; color: #000 !important; }
+
+        .key-area { flex: 1; padding: 4px; background: #111; overflow-y: auto; display: flex; flex-direction: column; touch-action: pan-y; }
+        .keypad, .ext-panel { display: none; grid-template-columns: repeat(4, 1fr); gap: 4px; width: 100%; height: 100%; }
+        #panel-basic { display: grid; }
+
+        button { 
+            border: none; border-radius: 6px; font-size: clamp(1.2rem, 3.5vh, 2rem); 
+            cursor: pointer; background: #262626; color: #fff; display: flex; 
+            align-items: center; justify-content: center; min-height: 50px;
+        }
+        .op { color: #2e8b2e; background: #2a2a2a; }
+        .equal { background: #2e8b2e; color: #000; font-weight: bold; }
+        .ac { color: #ff4d4d; }
+        .c-btn { color: #2e8b2e; }
+        
+        .split-btn { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 0; background: transparent; }
+        .split-btn button { border-radius: 4px; font-size: 1.2rem; height: 100%; }
+
+        .bottom-area { 
+            flex: 0 0 auto; 
+            height: 140px; 
+            display: grid; 
+            grid-template-columns: 1fr; 
+            gap: 8px; 
+            padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); 
+            background: #000; 
+            border-top: 1px solid #2e8b2e; 
+            z-index: 50;
+        }
+        #history-box { border: 1px solid #333; border-radius: 10px; background: #080808; display: flex; overflow: hidden; position: relative; height: 100%; }
+        #history-list { flex: 1; overflow-y: auto; padding: 10px; font-size: 0.95rem; color: #ccc; line-height: 1.4; height: 100%; touch-action: pan-y; }
+        .history-clear { 
+            width: 45px; height: 100%; font-size: 0.75rem; font-weight: bold;
+            background: #222; color: #ff4d4d; border: none; border-right: 1px solid #333;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            writing-mode: vertical-rl; text-orientation: upright; letter-spacing: 2px;
+        }
+
+        .history-item {
+            border-bottom: 1px solid #222;
+            padding: 5px 0;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .history-item:active { background: #1a2a1a; }
+        .history-text { flex: 1; min-width: 0; overflow: hidden; }
+        .history-share-btn {
+            flex: 0 0 auto;
+            width: 32px; height: 32px;
+            background: #2a2a2a; border: 1px solid #444; border-radius: 6px;
+            color: #2e8b2e; font-size: 1rem;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: background 0.15s;
+            touch-action: manipulation;
+        }
+        .history-share-btn:active { background: #1a3a1a; }
+
+        .comp-panel { display: none; flex-direction: column; gap: 10px; padding: 12px; background: #1a1a1a; border-radius: 10px; border: 1px solid #333; }
+        .comp-panel.active-panel { display: flex; }
+        .comp-label { font-size: 0.75rem; color: #2e8b2e; font-weight: bold; margin-bottom: 2px; }
+        .comp-input { width: 100%; min-height: 70px; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 6px; font-size: 1rem; padding: 10px; resize: none; font-family: inherit; }
+        .comp-input:focus { outline: none; border-color: #2e8b2e; }
+        .comp-run-btn { background: #2e8b2e; color: #000; font-weight: bold; height: 50px; border-radius: 6px; font-size: 1.1rem; cursor: pointer; border: none; }
+        .comp-result-box { background: #000; border: 2px solid #2e8b2e; border-radius: 8px; padding: 12px; display: none; }
+        .comp-result-box.show { display: block; }
+        .comp-result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+        .comp-result-item { display: flex; flex-direction: column; padding: 6px 0; border-bottom: 1px solid #1e1e1e; }
+        .comp-result-item:nth-last-child(-n+2) { border-bottom: none; }
+        .comp-result-label { font-size: 0.7rem; color: #888; }
+        .comp-result-val { font-size: 1rem; font-weight: bold; color: #2e8b2e; word-break: break-all; }
+
+        /* グラフパネル */
+        .graph-panel { display: none; flex-direction: column; gap: 10px; padding: 12px; background: #1a1a1a; border-radius: 10px; border: 1px solid #333; overflow-y: auto; }
+        .graph-panel.active-panel { display: flex; }
+        .graph-type-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .graph-type-btn { background: #2a2a2a; border: 2px solid #333; border-radius: 8px; color: #aaa; font-size: 0.72rem; font-weight: bold; padding: 10px 4px; cursor: pointer; text-align: center; transition: 0.2s; line-height: 1.3; min-height: 52px; display: flex; align-items: center; justify-content: center; }
+        .graph-type-btn.selected { border-color: #2e8b2e; color: #2e8b2e; background: #0d1f0d; }
+        .graph-data-row { display: flex; flex-direction: column; gap: 4px; }
+        .graph-data-label { font-size: 0.72rem; color: #2e8b2e; font-weight: bold; }
+        .graph-data-input { width: 100%; background: #2a2a2a; border: 1px solid #444; color: #fff; border-radius: 6px; font-size: 0.9rem; padding: 8px 10px; font-family: inherit; }
+        .graph-data-input:focus { outline: none; border-color: #2e8b2e; }
+        .graph-run-btn { background: #2e8b2e; color: #000; font-weight: bold; height: 46px; border-radius: 6px; font-size: 1rem; cursor: pointer; border: none; flex-shrink: 0; }
+        .graph-canvas-wrap { background: #000; border: 1px solid #2e8b2e; border-radius: 8px; padding: 8px; display: none; position: relative; }
+        .graph-canvas-wrap.show { display: block; }
+        .graph-canvas-wrap canvas { width: 100% !important; height: auto !important; display: block; }
+        .graph-export-btn { margin-top: 8px; width: 100%; background: #1a1a1a; color: #2e8b2e; border: 1.5px solid #2e8b2e; border-radius: 6px; font-size: 0.95rem; font-weight: bold; height: 44px; cursor: pointer; font-family: inherit; }
+        .hidden { display: none !important; }
+        input[type="range"] { width: 100%; margin: 10px 0; -webkit-appearance: none; background: #333; height: 6px; border-radius: 3px; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; background: #2e8b2e; border-radius: 50%; }
+    </style>
+</head>
+<body>
+
+<header><h1 id="main-title">STATISTICS GRAPH</h1></header>
+
+<div id="display-container"><div id="display" contenteditable="true" inputmode="none">0</div></div>
+
+<div class="mode-selector">
+    <button class="mode-btn active" id="m-basic" onclick="showPanel('basic', this)">基本</button>
+    <button class="mode-btn" id="m-stats" onclick="showPanel('stats', this)">値数</button>
+    <button class="mode-btn" id="m-comp" onclick="showPanel('comp', this)">複合測定</button>
+    <button class="mode-btn" id="m-graph" onclick="showPanel('graph', this)">グラフ生成</button>
+</div>
+
+<div class="key-area">
+    <div id="panel-basic" class="keypad">
+        <button class="ac" onclick="clearAll()">AC</button>
+        <button class="c-btn" onclick="backspace()">C</button>
+        <div class="split-btn">
+            <button class="op" onclick="add('(')">(</button>
+            <button class="op" onclick="add(')')">)</button>
+        </div>
+        <button class="op" onclick="add('÷')">÷</button>
+        <button onclick="add('7')">7</button><button onclick="add('8')">8</button><button onclick="add('9')">9</button><button class="op" onclick="add('×')">×</button>
+        <button onclick="add('4')">4</button><button onclick="add('5')">5</button><button onclick="add('6')">6</button><button class="op" onclick="add('-')">-</button>
+        <button onclick="add('1')">1</button><button onclick="add('2')">2</button><button onclick="add('3')">3</button><button class="op" onclick="add('+')">+</button>
+        <button onclick="add('0')">0</button><button onclick="add('.')">.</button><button class="op" onclick="add(',')">,</button><button class="equal" onclick="calculate()">=</button>
+    </div>
+
+    <div id="panel-stats" class="ext-panel">
+        <button id="s-avg" onclick="add('平均値(')">平均</button><button id="s-mid" onclick="add('中央値(')">中央</button>
+        <button id="s-mod" onclick="add('最頻値(')">最頻</button><button id="s-var" onclick="add('分散(')">分散</button>
+        <button id="s-max" onclick="add('最大値(')">最大</button><button id="s-min" onclick="add('最小値(')">最小</button>
+        <button class="op" onclick="add(',')">,</button><button class="op" onclick="add(')')">)</button>
+    </div>
+
+    <div id="panel-comp" class="comp-panel">
+        <div class="comp-label">データをカンマ区切りで入力</div>
+        <textarea id="comp-input" class="comp-input" placeholder="例: 1, 2, 3, 4, 5"></textarea>
+        <button class="comp-run-btn" onclick="calcComp()">計算実行</button>
+        <div id="comp-result-box" class="comp-result-box">
+            <div class="comp-result-grid">
+                <div class="comp-result-item"><span class="comp-result-label">平均値</span><span class="comp-result-val" id="cr-avg">-</span></div>
+                <div class="comp-result-item"><span class="comp-result-label">中央値</span><span class="comp-result-val" id="cr-mid">-</span></div>
+                <div class="comp-result-item"><span class="comp-result-label">最頻値</span><span class="comp-result-val" id="cr-mod">-</span></div>
+                <div class="comp-result-item"><span class="comp-result-label">分散</span><span class="comp-result-val" id="cr-var">-</span></div>
+                <div class="comp-result-item"><span class="comp-result-label">標準偏差</span><span class="comp-result-val" id="cr-std">-</span></div>
+                <div class="comp-result-item"><span class="comp-result-label">最大値</span><span class="comp-result-val" id="cr-max">-</span></div>
+                <div class="comp-result-item"><span class="comp-result-label">最小値</span><span class="comp-result-val" id="cr-min">-</span></div>
+                <div class="comp-result-item"><span class="comp-result-label">データ数</span><span class="comp-result-val" id="cr-cnt">-</span></div>
+            </div>
+        </div>
+    </div>
+    <div id="panel-graph" class="graph-panel">
+        <div class="graph-data-label">グラフの種類</div>
+        <div class="graph-type-row">
+            <div class="graph-type-btn selected" id="gt-hist" onclick="selectGraphType('hist')">ヒスト<br>グラム</div>
+            <div class="graph-type-btn" id="gt-box"  onclick="selectGraphType('box')">箱ひげ図</div>
+            <div class="graph-type-btn" id="gt-scatter" onclick="selectGraphType('scatter')">散布図</div>
+            <div class="graph-type-btn" id="gt-bar"  onclick="selectGraphType('bar')">棒グラフ</div>
+        </div>
+        <div class="graph-data-row">
+            <div class="graph-data-label">データ（カンマ区切り）</div>
+            <input type="text" id="graph-input" class="graph-data-input" placeholder="複合測定のデータを引き継ぎます">
+        </div>
+        <div id="graph-scatter-y-row" class="graph-data-row" style="display:none;">
+            <div class="graph-data-label">Y軸データ（散布図用・省略可）</div>
+            <input type="text" id="graph-input-y" class="graph-data-input" placeholder="省略時はインデックスをY軸に使用">
+        </div>
+        <button class="graph-run-btn" onclick="drawGraph()">グラフ生成</button>
+        <div class="graph-no-data" id="graph-no-data">データが不正です。数値をカンマ区切りで入力してください。</div>
+        <div class="graph-canvas-wrap" id="graph-canvas-wrap">
+            <canvas id="graph-canvas"></canvas>
+        </div>
+        <button class="graph-export-btn" id="graph-export-btn" style="display:none;" onclick="exportGraph()">📥 エクスポート（PNG保存）</button>
+    </div>
+</div>
+
+<div class="bottom-area">
+    <div id="history-box">
+        <button class="history-clear" onclick="clearHistory()">CLEAR</button>
+        <div id="history-list"></div>
+    </div>
+</div>
+
+<script>
+    const disp = document.getElementById('display');
+    let isCalculated = false, currentLang = 'ja';
+    let isBracketOpen = false;
+
+    const pMap = {'Q':'1000000000000000000000000000000','R':'1000000000000000000000000000','Y':'1000000000000000000000000','Z':'1000000000000000000000','E':'1000000000000000000','P':'1000000000000000','T':'1000000000000','G':'1000000000','M':'1000000','k':'1000','h':'100','da':'10','d':'0.1','c':'0.01','m':'0.001','μ':'0.000001','n':'0.000000001','p':'0.000000000001','f':'0.000000000000001','a':'0.000000000000000001','z':'0.000000000000000000001','y':'0.000000000000000000000001','r':'0.000000000000000000000000001','q':'0.000000000000000000000000000001'};
+
+    const tokens = ["sin(", "cos(", "tan(", "log(", "√(", "平均値(", "中央値(", "最頻値(", "最大値(", "最小値(", "分散("];
+    const ops = ['+', '-', '×', '÷', '^', ','];
+    const limitTokens = ['.', '°', 'i', 'e', 'π'];
+
+    function setCursor(pos) {
+        disp.focus();
+        const sel = window.getSelection();
+        if (disp.childNodes.length > 0) {
+            const range = document.createRange();
+            const node = disp.childNodes[0];
+            const targetPos = Math.min(Math.max(0, pos), node.length);
+            range.setStart(node, targetPos);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+    }
+
+    function getSafePos() {
+        const sel = window.getSelection();
+        if (sel.rangeCount > 0) {
+            const range = sel.getRangeAt(0);
+            if (range.startContainer === disp || range.startContainer.parentNode === disp) {
+                return range.startOffset;
+            }
+        }
+        return disp.innerText.length;
+    }
+
+    let exprStr = "0";
+    let cursorPos = 1;
+    let inputQueue = [];
+    let processing = false;
+
+    function setDispText(str) {
+        if (disp.childNodes.length === 1 && disp.childNodes[0].nodeType === Node.TEXT_NODE) {
+            disp.childNodes[0].nodeValue = str;
+        } else {
+            const scrollPos = disp.scrollLeft;
+            disp.textContent = str;
+            disp.scrollLeft = scrollPos;
+        }
+    }
+
+    function applyState() {
+        setDispText(exprStr);
+        setCursor(cursorPos);
+        scrollToCursor();
+    }
+
+    function flushQueue() {
+        if (processing || inputQueue.length === 0) return;
+        processing = true;
+        while (inputQueue.length > 0) {
+            const fn = inputQueue.shift();
+            fn();
+        }
+        applyState();
+        processing = false;
+    }
+
+    function enqueue(fn) {
+        inputQueue.push(fn);
+        if (!processing) flushQueue();
+    }
+
+    function computeInsert(text) {
+        let c = exprStr;
+        let p = cursorPos;
+
+        if (c === "0" && p === 1 && text !== '.' && !ops.includes(text) && text !== '⁻') {
+            c = ""; p = 0;
+        }
+
+        const blockAtStart = ['+', '-', '×', '÷', '^', ',', '°'];
+        if (p === 0 && blockAtStart.includes(text)) return;
+
+        if (text === ')') {
+            const openCount  = (c.match(/\(/g) || []).length;
+            const closeCount = (c.match(/\)/g) || []).length;
+            if (closeCount >= openCount) return;
+        }
+
+        if (isBracketOpen && text.includes('(')) {
+            for (let t of tokens) {
+                let idx = c.lastIndexOf(t, p - 1);
+                if (idx !== -1 && !c.substring(idx).includes(')')) {
+                    c = c.substring(0, idx) + c.substring(p);
+                    p = idx; break;
+                }
+            }
+        } else if (isBracketOpen) {
+            if (!/^[0-9.,⁻]$/.test(text) && text !== ')') return;
+        }
+
+        let prevChar = c[p - 1];
+        if (ops.includes(text) || limitTokens.includes(text)) {
+            if (ops.includes(prevChar) || limitTokens.includes(prevChar)) {
+                c = c.substring(0, p - 1) + c.substring(p);
+                p = p - 1;
+            }
+        }
+
+        exprStr = c.substring(0, p) + text + c.substring(p);
+        cursorPos = p + text.length;
+
+        if (text.includes('(')) isBracketOpen = true;
+        if (text === ')') isBracketOpen = false;
+    }
+
+    function computeBackspace() {
+        const c = exprStr;
+        const p = cursorPos;
+        if (p === 0 || c === "0") return;
+
+        let start = p - 1, end = p;
+        for (let t of tokens) {
+            let idx = -1;
+            while ((idx = c.indexOf(t, idx + 1)) !== -1) {
+                if (p > idx && p <= idx + t.length) {
+                    start = idx; end = idx + t.length; break;
+                }
+            }
+        }
+
+        const newText = c.substring(0, start) + c.substring(end);
+        exprStr = newText || "0";
+        cursorPos = start;
+
+        let openCount = (exprStr.match(/\(/g) || []).length;
+        let closeCount = (exprStr.match(/\)/g) || []).length;
+        isBracketOpen = openCount > closeCount;
+    }
+
+    function scrollToCursor() {
+        requestAnimationFrame(() => {
+            const sel = window.getSelection();
+            if (!sel || sel.rangeCount === 0) return;
+            const range = sel.getRangeAt(0).cloneRange();
+            range.collapse(true);
+            const rect = range.getBoundingClientRect();
+            const dispRect = disp.getBoundingClientRect();
+            if (rect.right > dispRect.right) {
+                disp.scrollLeft += rect.right - dispRect.right + 10;
+            } else if (rect.left < dispRect.left) {
+                disp.scrollLeft -= dispRect.left - rect.left + 10;
+            }
+        });
+    }
+
+    function add(val) {
+        enqueue(() => {
+            if (isCalculated) {
+                if (!ops.includes(val) && !limitTokens.includes(val) && val !== '⁻' && !val.includes('(')) {
+                    exprStr = "0"; cursorPos = 1;
+                }
+                isCalculated = false;
+            }
+            computeInsert(val);
+        });
+    }
+
+    function backspace() {
+        enqueue(() => { computeBackspace(); });
+    }
+
+    function clearAll() {
+        inputQueue = [];
+        exprStr = "0"; cursorPos = 1;
+        isCalculated = false; isBracketOpen = false;
+        applyState();
+    }
+    
+    function shareToMemo(expr, result) {
+        const text = expr + ' = ' + result;
+        if (navigator.share) {
+            navigator.share({ title: 'Calculator Result', text: text }).catch(() => {});
+        } else {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('クリップボードにコピーしました:\n' + text);
+            }).catch(() => {
+                window.prompt('以下をコピーしてメモに貼り付けてください:', text);
+            });
+        }
+    }
+
+    function clearHistory() { document.getElementById('history-list').innerHTML = ""; sessionStorage.removeItem('calcHistory'); }
+
+    function restoreExpression(expr) {
+        inputQueue = [];
+        exprStr = expr; cursorPos = expr.length;
+        isCalculated = false;
+        let openCount = (expr.match(/\(/g) || []).length;
+        let closeCount = (expr.match(/\)/g) || []).length;
+        isBracketOpen = openCount > closeCount;
+        applyState();
+        showPanel('basic', document.getElementById('m-basic'));
+    }
+
+    const processStr = (s) => {
+        let res = s.replace(/×/g,'*').replace(/÷/g,'/');
+        const pKeys = Object.keys(pMap).sort((a,b) => b.length - a.length);
+        const esc = p => p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+        const pPat = pKeys.map(esc).join('|');
+        const numPrefixSeq = new RegExp('(\\d+(?:\\.\\d+)?)(' + pPat + ')((?:' + pPat + ')*)', 'g');
+        res = res.replace(numPrefixSeq, (match, num, firstP, rest) => {
+            let out = '(' + num + '*' + pMap[firstP] + ')';
+            if (rest) { const rReg = new RegExp(pPat, 'g'); let m2; while ((m2 = rReg.exec(rest)) !== null) out += '*(' + pMap[m2[0]] + ')'; }
+            return out;
+        });
+        const seqReg = new RegExp('(' + pPat + ')((?:' + pPat + ')+)', 'g');
+        res = res.replace(seqReg, (match) => {
+            const rReg = new RegExp(pPat, 'g'); let parts = [], m2;
+            while ((m2 = rReg.exec(match)) !== null) parts.push('(' + pMap[m2[0]] + ')');
+            return parts.join('*');
+        });
+        const singleReg = new RegExp('(?<![\\w.])(' + pPat + ')(?![a-zA-Z\\d])', 'g');
+        res = res.replace(singleReg, (match, p) => { if (p === 'e') return match; return '(' + pMap[p] + ')'; });
+        return res;
+    };
+
+    const getNums = (str) => { return str.split(',').map(part => { try { return parseFloat(eval(processStr(part.trim()))); } catch { return NaN; } }).filter(n => !isNaN(n)); };
+    const _avg = (g) => { const n = getNums(g); return n.length ? n.reduce((a,b)=>a+b)/n.length : 0; };
+    const _mid = (g) => { const n = getNums(g).sort((a,b)=>a-b); const l=n.length, m=Math.floor(l/2); return l ? (l%2?n[m]:(n[m-1]+n[m])/2) : 0; };
+    const _mod = (g) => { const n = getNums(g); if(!n.length) return 0; const f = {}; n.forEach(x => f[x] = (f[x]||0)+1); const max = Math.max(...Object.values(f)); const res = Object.keys(f).filter(k => f[k] === max); return res.join('&'); };
+    const _max = (g) => { const n = getNums(g); return n.length ? Math.max(...n) : 0; };
+    const _min = (g) => { const n = getNums(g); return n.length ? Math.min(...n) : 0; };
+    const _var = (g) => { const n = getNums(g); if(!n.length) return 0; const avg = n.reduce((a,b)=>a+b)/n.length; return n.reduce((a,b)=>a+(b-avg)**2,0)/n.length; };
+
+    function calculate() {
+        if (isBracketOpen) return;
+        try {
+            let originalInput = exprStr;
+            if (originalInput === "0") return;
+            let parts = originalInput.split(/,(?![^\(]*\))/);
+            let results = parts.map(part => {
+                let s = part.trim();
+                s = s.replace(/平均値\((.*?)\)/g, (m, g) => _avg(g)).replace(/中央値\((.*?)\)/g, (m, g) => _mid(g))
+                     .replace(/最頻値\((.*?)\)/g, (m, g) => _mod(g)).replace(/最大値\((.*?)\)/g, (m, g) => _max(g)).replace(/最小値\((.*?)\)/g, (m, g) => _min(g))
+                     .replace(/分散\((.*?)\)/g, (m, g) => _var(g));
+                s = processStr(s);
+                s = s.replace(/π/g,Math.PI).replace(/e/g,Math.E).replace(/⁻/g,'-').replace(/\^/g,'**')
+                     .replace(/√\((.*?)\)/g, 'Math.sqrt($1)').replace(/sin\((.*?)\)/g, 'Math.sin($1*Math.PI/180)')
+                     .replace(/cos\((.*?)\)/g, 'Math.cos($1*Math.PI/180)').replace(/tan\((.*?)\)/g, 'Math.tan($1*Math.PI/180)')
+                     .replace(/log\((.*?)\)/g, 'Math.log10($1)');
+                let res = eval(s);
+                if (typeof res === 'number') {
+                    if (Math.abs(res) >= 1e21 || (Math.abs(res) < 1e-7 && res !== 0)) return res.toExponential().replace(/\+/, '');
+                    return parseFloat(Number(res).toPrecision(15));
+                }
+                return res;
+            });
+            let finalOutput = results.join(', ');
+            const log = document.getElementById('history-list');
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.dataset.expr = originalInput;
+            item.dataset.result = finalOutput;
+            const timeStr = new Date().toLocaleTimeString();
+            const textDiv = document.createElement('div');
+            textDiv.className = 'history-text';
+            textDiv.innerHTML = `<small>${timeStr}</small><br>${originalInput} = <b style="color:#2e8b2e">${finalOutput}</b>`;
+            textDiv.onclick = function() { restoreExpression(item.dataset.expr); };
+            const shareBtn = document.createElement('button');
+            shareBtn.className = 'history-share-btn';
+            shareBtn.textContent = '↗';
+            shareBtn.onclick = function(e) { e.stopPropagation(); shareToMemo(item.dataset.expr, item.dataset.result); };
+            item.appendChild(textDiv);
+            item.appendChild(shareBtn);
+            log.prepend(item);
+            const saved = JSON.parse(sessionStorage.getItem('calcHistory') || '[]');
+            saved.unshift({ expr: originalInput, result: finalOutput, time: timeStr });
+            sessionStorage.setItem('calcHistory', JSON.stringify(saved));
+            exprStr = finalOutput;
+            cursorPos = finalOutput.length;
+            isCalculated = true;
+            isBracketOpen = false;
+            applyState();
+        } catch {
+            exprStr = "Error"; cursorPos = 5;
+            isCalculated = true;
+            applyState();
+        }
+    }
+
+    function showPanel(id, btn) {
+        document.querySelectorAll('.keypad, .ext-panel').forEach(p => p.style.display = 'none');
+        document.querySelectorAll('.comp-panel, .graph-panel').forEach(p => p.classList.remove('active-panel'));
+        if (id === 'comp') {
+            document.getElementById('panel-comp').classList.add('active-panel');
+        } else if (id === 'graph') {
+            document.getElementById('panel-graph').classList.add('active-panel');
+            // 複合測定のデータを引き継ぐ
+            const compData = document.getElementById('comp-input').value.trim();
+            if (compData) document.getElementById('graph-input').value = compData;
+        } else {
+            document.getElementById('panel-' + id).style.display = 'grid';
+        }
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+
+    let currentGraphType = 'hist';
+
+    function selectGraphType(type) {
+        currentGraphType = type;
+        ['hist','box','scatter','bar'].forEach(t => {
+            document.getElementById('gt-' + t).classList.toggle('selected', t === type);
+        });
+        document.getElementById('graph-scatter-y-row').style.display = type === 'scatter' ? 'flex' : 'none';
+    }
+
+    function parseGraphNums(str) {
+        return str.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+    }
+
+    function drawGraph() {
+        const nums = parseGraphNums(document.getElementById('graph-input').value);
+        const noDataEl = document.getElementById('graph-no-data');
+        const wrapEl = document.getElementById('graph-canvas-wrap');
+        if (!nums.length) { noDataEl.style.display = 'block'; wrapEl.classList.remove('show'); return; }
+        noDataEl.style.display = 'none';
+        wrapEl.classList.add('show');
+        document.getElementById('graph-export-btn').style.display = 'block';
+
+        const canvas = document.getElementById('graph-canvas');
+        const dpr = window.devicePixelRatio || 1;
+        const W = canvas.parentElement.clientWidth - 16;
+        const H = Math.round(W * 0.55);
+        canvas.width = W * dpr;
+        canvas.height = H * dpr;
+        canvas.style.width = W + 'px';
+        canvas.style.height = H + 'px';
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+
+        const GREEN = '#2e8b2e';
+        const GREENFILL = 'rgba(46,139,46,0.7)';
+        const GREENFILL2 = 'rgba(46,139,46,0.3)';
+        const BG = '#000';
+        const AXIS = '#555';
+        const TEXT = '#aaa';
+        const PAD = { top: 20, right: 20, bottom: 40, left: 48 };
+        const iw = W - PAD.left - PAD.right;
+        const ih = H - PAD.top - PAD.bottom;
+
+        ctx.fillStyle = BG;
+        ctx.fillRect(0, 0, W, H);
+
+        function drawAxes(xLabels, xMin, xMax, yMin, yMax, gridY) {
+            ctx.strokeStyle = AXIS;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(PAD.left, PAD.top);
+            ctx.lineTo(PAD.left, PAD.top + ih);
+            ctx.lineTo(PAD.left + iw, PAD.top + ih);
+            ctx.stroke();
+            ctx.fillStyle = TEXT;
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            if (gridY) {
+                gridY.forEach(v => {
+                    const y = PAD.top + ih - ((v - yMin) / (yMax - yMin)) * ih;
+                    ctx.strokeStyle = '#222';
+                    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + iw, y); ctx.stroke();
+                    ctx.fillStyle = TEXT;
+                    ctx.fillText(v % 1 === 0 ? v : v.toFixed(1), PAD.left - 4, y);
+                });
+            }
+            if (xLabels) {
+                ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+                xLabels.forEach((lb, i) => {
+                    const x = PAD.left + (i + 0.5) * (iw / xLabels.length);
+                    ctx.fillStyle = TEXT;
+                    ctx.fillText(lb, x, PAD.top + ih + 5);
+                });
+            }
+        }
+
+        function niceRange(min, max, ticks) {
+            const range = max - min || 1;
+            const step = Math.pow(10, Math.floor(Math.log10(range / ticks)));
+            const niceStep = [1,2,5,10].find(s => s * step >= range / ticks) * step;
+            const niceMin = Math.floor(min / niceStep) * niceStep;
+            const niceMax = Math.ceil(max / niceStep) * niceStep;
+            const grid = [];
+            for (let v = niceMin; v <= niceMax + 1e-9; v += niceStep) grid.push(parseFloat(v.toPrecision(10)));
+            return { min: niceMin, max: niceMax, grid };
+        }
+
+        if (currentGraphType === 'hist') {
+            const binCount = Math.max(4, Math.min(15, Math.ceil(Math.sqrt(nums.length))));
+            const mn = Math.min(...nums), mx = Math.max(...nums);
+            const binW = (mx - mn) / binCount || 1;
+            const bins = Array(binCount).fill(0);
+            nums.forEach(v => { let i = Math.min(binCount - 1, Math.floor((v - mn) / binW)); bins[i]++; });
+            const maxBin = Math.max(...bins);
+            const yr = niceRange(0, maxBin, 4);
+            const labels = bins.map((_, i) => {
+                const lo = mn + i * binW;
+                return lo % 1 === 0 ? String(Math.round(lo)) : lo.toFixed(1);
+            });
+            drawAxes(null, null, null, yr.min, yr.max, yr.grid);
+            bins.forEach((cnt, i) => {
+                const x = PAD.left + i * (iw / binCount);
+                const bw = iw / binCount - 2;
+                const bh = cnt === 0 ? 0 : ((cnt - yr.min) / (yr.max - yr.min)) * ih;
+                ctx.fillStyle = GREENFILL;
+                ctx.strokeStyle = GREEN;
+                ctx.lineWidth = 1.5;
+                ctx.fillRect(x + 1, PAD.top + ih - bh, bw, bh);
+                ctx.strokeRect(x + 1, PAD.top + ih - bh, bw, bh);
+                ctx.fillStyle = TEXT;
+                ctx.font = '9px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillText(labels[i], x + bw / 2 + 1, PAD.top + ih + 5);
+            });
+
+        } else if (currentGraphType === 'box') {
+            const sorted = [...nums].sort((a, b) => a - b);
+            const n = sorted.length;
+            const q1 = sorted[Math.floor(n * 0.25)];
+            const q3 = sorted[Math.floor(n * 0.75)];
+            const med = n % 2 === 1 ? sorted[Math.floor(n/2)] : (sorted[n/2-1]+sorted[n/2])/2;
+            const iqr = q3 - q1;
+            const whisLo = Math.min(...sorted.filter(v => v >= q1 - 1.5 * iqr));
+            const whisHi = Math.max(...sorted.filter(v => v <= q3 + 1.5 * iqr));
+            const outliers = sorted.filter(v => v < whisLo || v > whisHi);
+            const allVals = [whisLo, whisHi, ...outliers];
+            const yr = niceRange(Math.min(...allVals), Math.max(...allVals), 5);
+            const toY = v => PAD.top + ih - ((v - yr.min) / (yr.max - yr.min)) * ih;
+            drawAxes(null, null, null, yr.min, yr.max, yr.grid);
+            const cx = PAD.left + iw / 2;
+            const bw = iw * 0.35;
+            ctx.strokeStyle = GREEN; ctx.lineWidth = 2;
+            // whiskers
+            ctx.beginPath(); ctx.moveTo(cx, toY(whisHi)); ctx.lineTo(cx, toY(q3)); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx, toY(whisLo)); ctx.lineTo(cx, toY(q1)); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx - bw*0.3, toY(whisHi)); ctx.lineTo(cx + bw*0.3, toY(whisHi)); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx - bw*0.3, toY(whisLo)); ctx.lineTo(cx + bw*0.3, toY(whisLo)); ctx.stroke();
+            // box
+            ctx.fillStyle = GREENFILL2;
+            ctx.fillRect(cx - bw/2, toY(q3), bw, toY(q1) - toY(q3));
+            ctx.strokeRect(cx - bw/2, toY(q3), bw, toY(q1) - toY(q3));
+            // median
+            ctx.strokeStyle = '#7fff7f'; ctx.lineWidth = 2.5;
+            ctx.beginPath(); ctx.moveTo(cx - bw/2, toY(med)); ctx.lineTo(cx + bw/2, toY(med)); ctx.stroke();
+            // outliers
+            ctx.fillStyle = '#ff6666';
+            outliers.forEach(v => { ctx.beginPath(); ctx.arc(cx, toY(v), 3, 0, Math.PI*2); ctx.fill(); });
+            // labels
+            ctx.fillStyle = TEXT; ctx.font = '9px sans-serif'; ctx.textAlign = 'left';
+            [[whisHi,'最大'],[q3,'Q3'],[med,'中央'],[q1,'Q1'],[whisLo,'最小']].forEach(([v,lb]) => {
+                ctx.fillText(lb + ':' + (v%1===0?v:v.toFixed(2)), cx + bw/2 + 5, toY(v));
+            });
+
+        } else if (currentGraphType === 'scatter') {
+            const rawY = document.getElementById('graph-input-y').value.trim();
+            const ynums = rawY ? parseGraphNums(rawY) : nums.map((_, i) => i + 1);
+            const pairs = nums.map((x, i) => [x, ynums[i] !== undefined ? ynums[i] : i + 1]);
+            const xs = pairs.map(p => p[0]), ys = pairs.map(p => p[1]);
+            const xr = niceRange(Math.min(...xs), Math.max(...xs), 5);
+            const yr = niceRange(Math.min(...ys), Math.max(...ys), 5);
+            const toX = v => PAD.left + ((v - xr.min) / (xr.max - xr.min)) * iw;
+            const toY = v => PAD.top + ih - ((v - yr.min) / (yr.max - yr.min)) * ih;
+            drawAxes(null, xr.min, xr.max, yr.min, yr.max, yr.grid);
+            // X axis labels
+            ctx.fillStyle = TEXT; ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+            xr.grid.forEach(v => ctx.fillText(v%1===0?v:v.toFixed(1), toX(v), PAD.top+ih+5));
+            // points
+            pairs.forEach(([x, y]) => {
+                ctx.beginPath(); ctx.arc(toX(x), toY(y), 4, 0, Math.PI*2);
+                ctx.fillStyle = GREENFILL; ctx.fill();
+                ctx.strokeStyle = GREEN; ctx.lineWidth = 1.5; ctx.stroke();
+            });
+
+        } else if (currentGraphType === 'bar') {
+            const yr = niceRange(Math.min(0, Math.min(...nums)), Math.max(...nums), 5);
+            const toY = v => PAD.top + ih - ((v - yr.min) / (yr.max - yr.min)) * ih;
+            const labels = nums.map((_, i) => String(i + 1));
+            drawAxes(labels, null, null, yr.min, yr.max, yr.grid);
+            const bw = (iw / nums.length) * 0.7;
+            nums.forEach((v, i) => {
+                const x = PAD.left + (i + 0.5) * (iw / nums.length) - bw / 2;
+                const y0 = toY(Math.max(0, yr.min));
+                const yv = toY(v);
+                const bh = Math.abs(y0 - yv);
+                ctx.fillStyle = GREENFILL;
+                ctx.strokeStyle = GREEN;
+                ctx.lineWidth = 1.5;
+                ctx.fillRect(x, Math.min(y0, yv), bw, bh);
+                ctx.strokeRect(x, Math.min(y0, yv), bw, bh);
+                ctx.fillStyle = TEXT; ctx.font = '9px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = v >= 0 ? 'bottom' : 'top';
+                ctx.fillText(v%1===0?v:v.toFixed(1), x + bw/2, v >= 0 ? yv - 2 : yv + 2);
+            });
+        }
+    }
+
+    function exportGraph() {
+        const canvas = document.getElementById('graph-canvas');
+        const filename = 'graph_' + currentGraphType + '_' + new Date().toISOString().slice(0,19).replace(/[:T]/g,'-') + '.png';
+        const dataURL = canvas.toDataURL('image/png');
+        // iOS Safari など download属性が効かない環境でも動作するよう新タブで開く
+        try {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = dataURL;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch(e) {
+            // フォールバック：新タブで画像を開く
+            const w = window.open('', '_blank');
+            if (w) {
+                w.document.write('<img src="' + dataURL + '" style="max-width:100%;"><br><small>長押し→画像を保存</small>');
+            }
+        }
+    }
+
+    function calcComp() {
+        const raw = document.getElementById('comp-input').value;
+        const nums = raw.split(',').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+        if (!nums.length) return;
+        const n = nums.length;
+        const avg = nums.reduce((a, b) => a + b, 0) / n;
+        const sorted = [...nums].sort((a, b) => a - b);
+        const mid = n % 2 === 1 ? sorted[Math.floor(n/2)] : (sorted[n/2-1] + sorted[n/2]) / 2;
+        const freq = {}; nums.forEach(x => freq[x] = (freq[x]||0)+1);
+        const maxF = Math.max(...Object.values(freq));
+        const mod = Object.keys(freq).filter(k => freq[k] === maxF).join(', ');
+        const variance = nums.reduce((a, b) => a + (b - avg) ** 2, 0) / n;
+        const std = Math.sqrt(variance);
+        const mx = Math.max(...nums);
+        const mn = Math.min(...nums);
+        const fmt = v => parseFloat(v.toPrecision(10));
+        document.getElementById('cr-avg').textContent = fmt(avg);
+        document.getElementById('cr-mid').textContent = fmt(mid);
+        document.getElementById('cr-mod').textContent = mod;
+        document.getElementById('cr-var').textContent = fmt(variance);
+        document.getElementById('cr-std').textContent = fmt(std);
+        document.getElementById('cr-max').textContent = mx;
+        document.getElementById('cr-min').textContent = mn;
+        document.getElementById('cr-cnt').textContent = n + ' 個';
+        document.getElementById('comp-result-box').classList.add('show');
+    }
+
+    window.onload = () => {
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                this.click();
+            }, { passive: false });
+        });
+        disp.addEventListener('keydown', (e) => { if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) e.preventDefault(); });
+        disp.addEventListener('focus', () => { if(exprStr === "0") requestAnimationFrame(() => setCursor(1)); });
+        disp.addEventListener('keyup', () => { cursorPos = getSafePos(); });
+        disp.addEventListener('mouseup', () => { cursorPos = getSafePos(); });
+        disp.addEventListener('touchend', () => { setTimeout(() => { cursorPos = getSafePos(); }, 50); });
+        const saved = JSON.parse(sessionStorage.getItem('calcHistory') || '[]');
+        const log = document.getElementById('history-list');
+        saved.forEach(h => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.dataset.expr = h.expr;
+            item.dataset.result = h.result;
+            const textDiv2 = document.createElement('div');
+            textDiv2.className = 'history-text';
+            textDiv2.innerHTML = `<small>${h.time}</small><br>${h.expr} = <b style="color:#2e8b2e">${h.result}</b>`;
+            textDiv2.onclick = function() { restoreExpression(item.dataset.expr); };
+            const shareBtn2 = document.createElement('button');
+            shareBtn2.className = 'history-share-btn';
+            shareBtn2.textContent = '↗';
+            shareBtn2.onclick = function(e) { e.stopPropagation(); shareToMemo(item.dataset.expr, item.dataset.result); };
+            item.appendChild(textDiv2);
+            item.appendChild(shareBtn2);
+            log.appendChild(item);
+        });
+    };
+
+    document.addEventListener('touchstart', function(e) {
+        if (e.touches.length > 1) e.preventDefault();
+    }, { passive: false });
+
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) e.preventDefault();
+        lastTouchEnd = now;
+    }, { passive: false });
+
+    document.addEventListener('gesturestart', function(e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener('gesturechange', function(e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener('gestureend', function(e) { e.preventDefault(); }, { passive: false });
+</script>
+</body>
+</html>
